@@ -1,35 +1,37 @@
 import java.util.Vector;
 
-//TODO:change velocity and acceleration into double
 class Boid {
-    int[] position = { (int)(Math.random()*BoidPanel.width), (int)(Math.random()*BoidPanel.height) };
-    int[] velocity = { (int) Math.ceil((0.5 - Math.random()) * 5), (int) Math.ceil((0.5 - Math.random()) * 5) };
+    int[] position = { (int) (Math.random() * BoidPanel.width), (int) (Math.random() * BoidPanel.height) };
+    double maxVelocity = 4;
+    double[] velocity = { Math.ceil((0.5 - Math.random()) * maxVelocity), Math.ceil((0.5 - Math.random()) * maxVelocity) };
 
-    int[] acceleration = { 0, 0 }; // By spliting a single direction into changes in X and Y axis we can better
-                                   // manipulate the object
-    int maxAcceleration=3;                               
-    int maxVelocity = 5;
+    double[] acceleration = { 0, 0 }; // By spliting a single direction into changes in X and Y axis we can better
+                                      // manipulate the object
+    double maxAcceleration = 2;
 
     Boid() {
     }
 
-    Boid(int[] position, int[] velocity, int[] acceleration) {
+    Boid(int[] position, double[] velocity, double[] acceleration) {
         this.position = position;
         this.velocity = velocity;
         this.acceleration = acceleration;
     }
 
-    public void addAcceleration(int[] acceleration){
-        this.acceleration[0]=(acceleration[0]<=maxAcceleration)?acceleration[0]:(int)Math.signum(acceleration[0])*maxAcceleration;
-        this.acceleration[1]=(acceleration[1]<=maxAcceleration)?acceleration[1]:(int)Math.signum(acceleration[1])*maxAcceleration;
+    public void addAcceleration(double[] acceleration) {
+        this.acceleration[0]+=acceleration[0];
+        this.acceleration[1]+=acceleration[1];
+        // velocity[0]=acceleration[0]==0?velocity[0]:acceleration[0]/maxAcceleration*maxVelocity;
+        // velocity[1]=acceleration[1]==0?velocity[1]:acceleration[1]/maxAcceleration*maxVelocity;
 
     }
-    public int[] align(Vector<Boid> boids) {
-        int[] averageVelocity = { 0, 0 };
+
+    public double[] align(Vector<Boid> boids) { // TODO: this function such spit out direction only
+        double[] averageVelocity = { 0, 0 };
         int total = 0;
-        int perceptionRadius = 100;
+        double perceptionRadius = 100;
         for (Boid boid : boids) {
-            int distance = (int) Math.hypot(this.position[0] - boid.position[0], this.position[1] - boid.position[1]);
+            double distance = Math.hypot(this.position[0] - boid.position[0], this.position[1] - boid.position[1]);
             if (distance <= perceptionRadius && boid != this) {
                 averageVelocity[0] += boid.velocity[0];
                 averageVelocity[1] += boid.velocity[1];
@@ -37,29 +39,89 @@ class Boid {
             }
         }
         if (total > 0) {
-            averageVelocity[0] = (int)Math.ceil(averageVelocity[0] / (double)total);
-            averageVelocity[1] = (int)Math.ceil(averageVelocity[1] / (double)total);
-            int xAccel=Math.abs(averageVelocity[0] - this.velocity[0])<=3?averageVelocity[0] - this.velocity[0]:maxAcceleration*(int)Math.signum((double)(averageVelocity[0] - this.velocity[0]));
-            int yAccel=Math.abs(averageVelocity[1] - this.velocity[1])<=3?averageVelocity[1] - this.velocity[1]:maxAcceleration*(int)Math.signum((double)(averageVelocity[1] - this.velocity[1]));
-            return new int[] {xAccel,yAccel};
+            averageVelocity[0] /= total;
+            averageVelocity[1] /= total;
+
+            double xAccel=0,yAccel=0;
+            double currnetMag=Math.hypot(averageVelocity[0],averageVelocity[1]);
+            if(currnetMag!=0){
+                xAccel = averageVelocity[0]/currnetMag*maxVelocity;
+                yAccel = averageVelocity[1]/currnetMag*maxVelocity;
+            }
+            xAccel -= this.velocity[0];
+            yAccel -= this.velocity[1];
+            xAccel=limitToMax(xAccel, maxAcceleration);
+            yAccel=limitToMax(yAccel, maxAcceleration);
+
+            return new double[] { xAccel, yAccel };
         }
         return averageVelocity;
     }
 
+    public double[] cohesion(Vector<Boid> boids) { // TODO: this function such spit out direction only
+        int[] centerOfMass = this.position;
+        int total = 0;
+        double perceptionRadius = 100;
+        for (Boid boid : boids) {
+            double distance = Math.hypot(this.position[0] - boid.position[0], this.position[1] - boid.position[1]);
+            if (distance <= perceptionRadius && boid != this) {
+                centerOfMass[0] += boid.position[0];
+                centerOfMass[1] += boid.position[1];
+                total++;
+            }
+        }
+        if (total > 0) {
+            centerOfMass[0] /= total;
+            centerOfMass[1] /= total;
+            centerOfMass[0] -= this.position[0];
+            centerOfMass[1] -= this.position[1];
+            double hypo = Math.hypot(centerOfMass[0], centerOfMass[1]);
+            double xVelocity = maxVelocity * centerOfMass[0] / hypo - this.velocity[0];
+            double yVelocity = maxVelocity * centerOfMass[1] / hypo - this.velocity[1];
+
+        }
+        return this.velocity;
+    }
+
+    public void updatePosition() {
+        position[0] += (int) Math.round(velocity[0]);
+        if (position[0] >= 0)
+            position[0] %= BoidPanel.width;
+        else {
+            position[0] = BoidPanel.width + position[0];
+        }
+        position[1] += (int) Math.round(velocity[1]);
+        if (position[1] >= 0)
+            position[1] %= BoidPanel.height;
+        else {
+            position[1] = BoidPanel.height + position[1];
+        }
+
+    }
+
+
+
+    public double limitToMax(double value,double maximum){
+        if(Math.abs(value)>maximum)
+            return Math.signum(value)*maximum;
+        else
+            return value;
+    }
 
     public void update() {
-        position[0] += velocity[0];
-        position[1] += velocity[1];
+        updatePosition();
 
-        if(velocity[0] + acceleration[0]<maxVelocity)
+        if (velocity[0] == 0 && velocity[1] == 0) {
+            acceleration[0] = Math.floor(Math.random() * maxAcceleration + 1);
+            acceleration[1] = Math.floor(Math.random() * maxAcceleration + 1);
+
+        }
         velocity[0] += acceleration[0];
-        else
-            velocity[0]=maxVelocity*(int)Math.signum((double)(velocity[0] + acceleration[0]));
-        if(velocity[1] + acceleration[1]<maxVelocity)
-            velocity[1] += acceleration[1];
-        else
-            velocity[1]=maxVelocity*(int)Math.signum((double)(velocity[1] + acceleration[1]));
-
+        velocity[1] += acceleration[1];
+        velocity[0]=limitToMax(velocity[0], maxVelocity);
+        velocity[1]=limitToMax(velocity[1], maxVelocity);
+        acceleration[0]=0;
+        acceleration[1]=0;
     }
 
     // TODO:loop around the panel

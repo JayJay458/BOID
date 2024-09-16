@@ -26,7 +26,7 @@ class Boids extends JFrame {
                 boidPanel.repaint();
             }
         };
-        Timer timer = new Timer(100, listener);
+        Timer timer = new Timer(10, listener);
         timer.start();
         this.setLocationRelativeTo(null);
         this.setVisible(true);
