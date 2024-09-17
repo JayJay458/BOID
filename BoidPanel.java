@@ -11,8 +11,9 @@ import java.util.Vector;
 public class BoidPanel extends JPanel {
     Vector<Boid> boids;
     int[][] boidDimension = new int[][] { { 0, 40, 0, 10 }, { 0, 20, 40, 20 } };
-    public static int width=1000;
-    public static int height=1000;
+    public static int width = 1000;
+    public static int height = 1000;
+
     BoidPanel() {
         this.setPreferredSize(new Dimension(BoidPanel.width, BoidPanel.height));
     }
@@ -28,7 +29,6 @@ public class BoidPanel extends JPanel {
         this(boids);
         this.boidDimension = boidDimension;
     }
-
 
     public int[] newPosition(int[] singleDimension, int currentXorY) {
         int[] newXorY = Arrays.copyOf(singleDimension, singleDimension.length);
@@ -48,12 +48,13 @@ public class BoidPanel extends JPanel {
             g2D.fill(new Polygon(newPosition(boidDimension[0], boid.position[0]),
                     newPosition(boidDimension[1], boid.position[1]), 4));
 
-
-            double[] alignmentForce=boid.align(boids);
-            if(alignmentForce[0]!=0||alignmentForce[1]!=0)
-                System.out.println("xAccel: "+alignmentForce[0]+ " yAccel: "+alignmentForce[1]);
+ 
+            double[] alignmentForce = boid.align(boids);
+            double[] cohesionForce = boid.cohesion(boids);
+            double[] separation=boid.separation(boids);
             boid.addAcceleration(alignmentForce);
-            // boid.velocity=boid.align(boids);
+            boid.addAcceleration(cohesionForce);
+            boid.addAcceleration(separation);
 
             boid.update();
         }

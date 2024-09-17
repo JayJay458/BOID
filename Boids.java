@@ -1,7 +1,6 @@
 import java.util.Vector;
 
 import java.awt.event.*;
-import java.awt.*;
 import javax.swing.*;
 
 class Boids extends JFrame {
